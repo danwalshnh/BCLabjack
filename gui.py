@@ -13,7 +13,7 @@ class LJGui:
         self.myGui = Tk()
 
         self.myGui.title("Balance Community LabJack Processor")
-        self.myGui.geometry("600x200+700+200")
+        self.myGui.geometry("450x200+600+200")
         load = Image.open("logo.png")
         load_resized = load.resize((200, 25), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load_resized)
@@ -21,7 +21,8 @@ class LJGui:
         img.image = render
         img.place(x=0, y=0)
 
-        myLabel = Label(text="Welcome! Enter the max number of requests, directory to save output and press run:",fg="blue",justify='left')
+        self.myLabel = Label(text="Welcome! Enter the max number of requests, directory to save to and press run:",
+                             fg="blue",justify='left').place(x=5,y=30)
 
 
         self.MAX_REQUEST= IntVar()
@@ -39,9 +40,9 @@ class LJGui:
 
         SaveToButton = Button(text = "Save to", command = self.SaveTo).place(x=10,y=90)
         RunButton = Button(text = "Run", command = self.Run).place(x=10,y=120)
-        reset = Button(text = "Reset Values", command = self.reset_values).place(x=10,y=165)
+        reset = Button(text = "Reset Values", command = self.reset_values).place(x=10,y=160)
 
-        quit = Button(text="Quit", command = self.closeWin).place(x=385,y=165)
+        quit = Button(text="Quit", command = self.closeWin).place(x=100,y=160)
 
         self.myGui.mainloop()
 
