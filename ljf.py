@@ -1,52 +1,52 @@
-def run_labjack():
-    """
-    Demonstrates setting up stream-in and stream-out together, then reading
-    stream-in values.
+"""
+Demonstrates setting up stream-in and stream-out together, then reading
+stream-in values.
 
-    Connect a wire from AIN0 to DAC0 to see the effect of stream-out on
-    stream-in channel 0.
+Connect a wire from AIN0 to DAC0 to see the effect of stream-out on
+stream-in channel 0.
 
-    Relevant Documentation:
+Relevant Documentation:
 
-    LJM Library:
-        LJM Library Installer:
-            https://labjack.com/support/software/installers/ljm
-        LJM Users Guide:
-            https://labjack.com/support/software/api/ljm
-        Opening and Closing:
-            https://labjack.com/support/software/api/ljm/function-reference/opening-and-closing
-        NamesToAddresses:
-            https://labjack.com/support/software/api/ljm/function-reference/utility/ljmnamestoaddresses
-        eWriteName:
-            https://labjack.com/support/software/api/ljm/function-reference/ljmewritename
-        Stream Functions (eStreamRead, eStreamStart, etc.):
-            https://labjack.com/support/software/api/ljm/function-reference/stream-functions
+LJM Library:
+    LJM Library Installer:
+        https://labjack.com/support/software/installers/ljm
+    LJM Users Guide:
+        https://labjack.com/support/software/api/ljm
+    Opening and Closing:
+        https://labjack.com/support/software/api/ljm/function-reference/opening-and-closing
+    NamesToAddresses:
+        https://labjack.com/support/software/api/ljm/function-reference/utility/ljmnamestoaddresses
+    eWriteName:
+        https://labjack.com/support/software/api/ljm/function-reference/ljmewritename
+    Stream Functions (eStreamRead, eStreamStart, etc.):
+        https://labjack.com/support/software/api/ljm/function-reference/stream-functions
 
-    T-Series and I/O:
-        Modbus Map:
-            https://labjack.com/support/software/api/modbus/modbus-map
-        Stream Mode:
-            https://labjack.com/support/datasheets/t-series/communication/stream-mode
-        Analog Inputs:
-            https://labjack.com/support/datasheets/t-series/ain
-        Stream-Out:
-            https://labjack.com/support/datasheets/t-series/communication/stream-mode/stream-out/stream-out-description
-        Digital I/O:
-            https://labjack.com/support/datasheets/t-series/digital-io
-        DAC:
-            https://labjack.com/support/datasheets/t-series/dac
+T-Series and I/O:
+    Modbus Map:
+        https://labjack.com/support/software/api/modbus/modbus-map
+    Stream Mode:
+        https://labjack.com/support/datasheets/t-series/communication/stream-mode
+    Analog Inputs:
+        https://labjack.com/support/datasheets/t-series/ain
+    Stream-Out:
+        https://labjack.com/support/datasheets/t-series/communication/stream-mode/stream-out/stream-out-description
+    Digital I/O:
+        https://labjack.com/support/datasheets/t-series/digital-io
+    DAC:
+        https://labjack.com/support/datasheets/t-series/dac
 
-    """
-    from datetime import datetime
-    import sys
-    import time
-    import collections
-    import pandas as pd
+"""
+from datetime import datetime
+import sys
+import time
+import collections
+import pandas as pd
+from labjack import ljm
 
-    from labjack import ljm
-
-
-    MAX_REQUESTS = 20 # The number of eStreamRead calls that will be performed.
+def run_labjack(file,MAX_REQUESTS):
+    #log string to store log information
+    log = ''
+    # The number of eStreamRead calls that will be performed.
 
     # Open first found LabJack
     handle = ljm.openS("ANY", "ANY", "ANY")  # Any device, Any connection, Any identifier
@@ -55,8 +55,8 @@ def run_labjack():
     # handle = ljm.open(ljm.constants.dtANY, ljm.constants.ctANY, "ANY")  # Any device, Any connection, Any identifier
 
     info = ljm.getHandleInfo(handle)
-    print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
-          "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
+    log+= ("Opened a LabJack with Device type: %i, Connection type: %i,\n"
+          "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i\n" %
           (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
 
     deviceType = info[0]
@@ -79,10 +79,9 @@ def run_labjack():
     ljm.eWriteName(handle, "STREAM_OUT0_BUFFER_F32", 3.0)  # 3.0 V
     ljm.eWriteName(handle, "STREAM_OUT0_BUFFER_F32", 4.0)  # 4.0 V
     ljm.eWriteName(handle, "STREAM_OUT0_BUFFER_F32", 5.0)  # 5.0 V
-
     ljm.eWriteName(handle, "STREAM_OUT0_SET_LOOP", 1)
 
-    print("STREAM_OUT0_BUFFER_STATUS = %f" % (ljm.eReadName(handle, "STREAM_OUT0_BUFFER_STATUS")))
+    log += ("STREAM_OUT0_BUFFER_STATUS = %f\n" % (ljm.eReadName(handle, "STREAM_OUT0_BUFFER_STATUS")))
 
     # Stream Configuration
     POS_IN_NAMES = ["AIN0", "AIN2"]
@@ -137,20 +136,19 @@ def run_labjack():
         ljm.eWriteNames(handle, numFrames, aNames, aValues)
 
         # Configure and start stream
-        print(aScanList[0:TOTAL_NUM_CHANNELS])
+        log += str(aScanList[0:TOTAL_NUM_CHANNELS]) +'\n'
         scanRate = ljm.eStreamStart(handle, scansPerRead, TOTAL_NUM_CHANNELS, aScanList, scanRate)
-        print("\nStream started with a scan rate of %0.0f Hz." % scanRate)
+        log += ("\nStream started with a scan rate of %0.0f Hz.\n" % scanRate)
 
-        print("\nPerforming %i stream reads." % MAX_REQUESTS)
+        log += ("\nPerforming %i stream reads.\n" % MAX_REQUESTS)
         start = datetime.now()
         totScans = 0
         totSkip = 0  # Total skipped samples
 
         i = 1
 
-        #file = open('log.txt', 'w')
         scan_number = 0
-
+        raw_data = collections.defaultdict(list)
         while i <= MAX_REQUESTS:
             ret = ljm.eStreamRead(handle)
 
@@ -167,55 +165,54 @@ def run_labjack():
             # reported after auto-recover mode ends.
             curSkip = data.count(-9999.0)
             totSkip += curSkip
-            raw_data = collections.defaultdict(list)
 
-            print("\neStreamRead #%i, %i scans" % (i, scans))
+
+            log += ("\neStreamRead #%i, %i scans\n" % (i, scans))
             readStr = "  "
             for j in range(0, scansPerRead):
-                raw_data['Time'].append(datetime.now())
+                raw_data['Time'].append(datetime.now()-start)
                 for k in range(0, NUM_IN_CHANNELS):
                     readStr += "%s: %0.5f, " % (POS_IN_NAMES[k], data[j * NUM_IN_CHANNELS + k])
                     raw_data[POS_IN_NAMES[k]].append(data[j * NUM_IN_CHANNELS + k])
                 readStr += "\n  "
                 scan_number+=1
                 raw_data['ScanNumber'].append(scan_number)
-                raw_data['ScanBlock'].append(j)
+                raw_data['ScanBlock'].append(i)
 
             readStr += "Scans Skipped = %0.0f, Scan Backlogs: Device = %i, LJM = %i" % \
                        (curSkip / NUM_IN_CHANNELS, ret[1], ret[2])
-            print(readStr)
-
-
+            log += (readStr)+'\n'
             i += 1
 
         end = datetime.now()
-
-        print("\nTotal scans = %i" % (totScans))
+        log += ("\nTotal scans = %i\n" % (totScans))
         tt = (end - start).seconds + float((end - start).microseconds) / 1000000
-        print("Time taken = %f seconds" % (tt))
-        print("LJM Scan Rate = %f scans/second" % (scanRate))
-        print("Timed Scan Rate = %f scans/second" % (totScans / tt))
-        print("Timed Sample Rate = %f samples/second" % (totScans * NUM_IN_CHANNELS / tt))
-        print("Skipped scans = %0.0f" % (totSkip / NUM_IN_CHANNELS))
+        log += ("Time taken = %f seconds\n" % (tt))
+        log += ("LJM Scan Rate = %f scans/second\n" % (scanRate))
+        log += ("Timed Scan Rate = %f scans/second\n" % (totScans / tt))
+        log += ("Timed Sample Rate = %f samples/second\n" % (totScans * NUM_IN_CHANNELS / tt))
+        log += ("Skipped scans = %0.0f\n" % (totSkip / NUM_IN_CHANNELS))
     except ljm.LJMError:
         ljme = sys.exc_info()[1]
-        print(ljme)
+        log+=(ljme)
     except Exception:
         e = sys.exc_info()[1]
-        print(e)
+        log+=(e)
 
     try:
-        print("\nStop Stream")
+        log += ("\nStop Stream\n")
         ljm.eStreamStop(handle)
     except ljm.LJMError:
         ljme = sys.exc_info()[1]
-        print(ljme)
+        log+=(ljme)
     except Exception:
         e = sys.exc_info()[1]
-        print(e)
+        log+=(e)
 
     # Close handle
     ljm.close(handle)
 
     raw_dataframe=pd.DataFrame.from_dict(raw_data)
-    raw_dataframe.to_csv("/Users/username/Desktop",index=False)
+    raw_dataframe.to_csv(file+'-data.csv',index=False)
+    with open(file+'-log.txt', "w") as log_file:
+        log_file.write(log)

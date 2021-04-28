@@ -52,15 +52,9 @@ class LJGui:
 
 
     def Run(self):
-        self.path.set(str(self.directory.get()) + '/' + datetime.datetime.now().strftime(format='%Y-%m-%d_%H-%M-%S') + '-log.csv')
+        self.path.set(str(self.directory.get()) + '/' + datetime.datetime.now().strftime(format='%Y-%m-%d_%H-%M-%S'))
         try:
-            with open(self.path.get(), "w") as file:
-                file.write('time,measurement\n')
-                i = 0
-                while i <= self.MAX_REQUEST.get():
-                    file.write(str(i) + "," + str(i * 3)+'\n')
-                    i+=1
-                #run_labjack(file, MAX_REQUEST)
+            run_labjack(self.path.get(), self.MAX_REQUEST.get())
             self.output.set("Success")
         except Exception as e:
             self.output.set(str(e))
